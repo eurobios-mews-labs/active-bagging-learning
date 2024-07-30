@@ -15,7 +15,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.model_selection import ShuffleSplit
 from active_learning.benchmark import functions
-from active_learning.components.active_criterion import ServiceVarianceCriterion
+from active_learning.components.active_criterion import VarianceCriterion
 
 fun = functions.grammacy_lee_2009  # The function we want to learn
 bounds = np.array(functions.bounds[fun])  # [x1 bounds, x2 bounds]
@@ -26,8 +26,7 @@ X_train = pd.DataFrame(
      })  # Initiate distribution
 y_train = -fun(X_train)
 
-SEED = 1234
-RNG = np.random.default_rng(seed=SEED)
+
 
 bounds = [[0, 1]]
 
@@ -41,12 +40,14 @@ def sampler(n):
     return pd.DataFrame(x0)
 
 
-kernel = 1 * RBF(0.01)
+kernel = 1 * RBF(0.1)
 krg = GaussianProcessRegressor(kernel=kernel)
 
 
 def test_active_criterion():
-    svc = ServiceVarianceCriterion(krg, ShuffleSplit())
+    SEED = 1234
+    RNG = np.random.default_rng(seed=SEED)
+    svc = VarianceCriterion(krg, ShuffleSplit())
     svc.fit(X_train, y_train)
 
     pred = svc.function(X_train)

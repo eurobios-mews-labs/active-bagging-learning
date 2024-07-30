@@ -20,16 +20,14 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
-from active_learning.components.active_criterion import ServiceGaussianProcessVariance, \
+from active_learning.components.active_criterion import GaussianProcessVariance, \
     VarianceBis
 from active_learning.components.query_strategies import QueryVariancePDF, \
     Uniform
-from active_learning.benchmark.test import Experiment
-from active_learning.benchmark.test import TestingClass, \
+from active_learning.benchmark.base import Experiment
+from active_learning.benchmark.base import TestingClass, \
     write_benchmark, read_benchmark, plot_benchmark
 
-SEED = 1234
-RNG = np.random.default_rng(seed=SEED)
 
 bounds = [[0, 1]]
 
@@ -66,14 +64,14 @@ if __name__ == '__main__':
 
     )
     testing = TestingClass(
-        budget, n0, unknown_function, ServiceGaussianProcessVariance(kernel=kernel),
+        budget, n0, unknown_function, GaussianProcessVariance(kernel=kernel),
         QueryVariancePDF(bounds, num_eval=200),
         sampler, steps, bounds=bounds, name="Gaussian process"
 
     )
 
     passive = TestingClass(
-        budget, n0, unknown_function, ServiceGaussianProcessVariance(kernel=kernel),
+        budget, n0, unknown_function, GaussianProcessVariance(kernel=kernel),
         Uniform(bounds),
         sampler, steps, bounds=bounds, name="Gaussian process (passive)"
     )

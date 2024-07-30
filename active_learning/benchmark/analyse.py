@@ -29,7 +29,7 @@ from active_learning.components import active_criterion
 from active_learning.components import query_strategies
 from active_learning.components.active_criterion import VarianceBis
 from active_learning.components.sampling import latin_square
-from active_learning.benchmark.test import TestingClass
+from active_learning.benchmark.base import TestingClass
 
 name = "grammacy_lee_2009_rand"
 fun = functions.__dict__[name]
@@ -63,37 +63,37 @@ def get_method_for_benchmark(name):
         crit = query_strategies.ServiceReject(num_eval=100)
 
     elif name == "branin":
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ExtraTreesRegressor(bootstrap=True))
         crit = query_strategies.ServiceQueryVariancePDF(num_eval=1000)
 
     elif name == "branin_rand":
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ExtraTreesRegressor(bootstrap=True))
         crit = query_strategies.ServiceQueryVariancePDF(num_eval=1000)
     elif name == "himmelblau":
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ExtraTreesRegressor(bootstrap=True))
         crit = query_strategies.ServiceQueryVariancePDF(num_eval=1000)
 
     elif name == "himmelblau_rand":
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ExtraTreesRegressor(bootstrap=True))
         crit = query_strategies.ServiceQueryVariancePDF(num_eval=1000)
 
     elif name == "synthetic_2d_1":
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ExtraTreesRegressor(bootstrap=True))
         crit = query_strategies.ServiceQueryVariancePDF(num_eval=1000)
 
     elif name == "synthetic_2d_2":
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ExtraTreesRegressor(bootstrap=True,
                                                    max_samples=0.9))
         crit = query_strategies.ServiceQueryVariancePDF(num_eval=1000)
 
     else:
-        est = active_criterion.ServiceVarianceEnsembleMethod(
+        est = active_criterion.VarianceEnsembleMethod(
             estimator=ensemble.ServiceExtraTreesRegressor(bootstrap=True,
                                                    max_samples=0.9,
                                                    max_features=1))

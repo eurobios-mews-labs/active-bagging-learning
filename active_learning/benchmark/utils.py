@@ -12,6 +12,57 @@
 import numpy as np
 import pandas as pd
 
+import matplotlib.pyplot as plt
+
+
+def plot_benchmark_whole_analysis(data: pd.DataFrame, n_functions) -> None:
+    import matplotlib
+    import seaborn as sns
+    matplotlib.rcParams.update({'font.size': 6})
+    functions__ = data["function_hash"].astype(str).str.replace("_passive", "").drop_duplicates()
+    fig, ax = plt.subplots(ncols=len(functions__) // 2 + len(functions__) % 2,
+                           nrows=2, figsize=(n_functions * 0.7, 3.5))
+    if ax.shape.__len__() == 1:
+        ax = ax.reshape(-1, 1)
+    for i, f in enumerate(functions__):
+        print(f)
+        ax_ = ax[i % 2, i // 2]
+        plt.sca(ax_)
+        data_temp = data[data["name"] == f].copy()
+        data_temp_p = data[data["name"] == f + "_passive"].copy()
+        data_temp["name"] = "active"
+        data_temp_p["name"] = "passive"
+        data_plot = pd.concat((data_temp, data_temp_p))
+        names = data_plot["name"].drop_duplicates().values
+
+        for j, n in enumerate(names):
+            data_ = data_plot[data_plot["name"] == n]
+            color = plt.get_cmap("crest")(j / (len(names)))
+            if i > 0:
+                label = '_nolegend_'
+            else:
+                label = n
+            sns.lineplot(data=data_, x="num_sample", y="L2-norm", label=label, color=color)
+        ax_.annotate(f, xy=(1, 0.8), xycoords='axes fraction',
+                     xytext=(1, 20), textcoords='offset pixels',
+                     horizontalalignment='right',
+                     verticalalignment='bottom',
+                     bbox=dict(boxstyle="round", fc="white", lw=0.4))
+        ax_.legend().set_visible(False)
+        ax_.set_ylabel("$L_2$ error") if i // 2 == 0 else ax_.set_ylabel("")
+        plt.yticks(c="w")
+        plt.xlabel("")
+        ax_.axes.yaxis.set_ticklabels([])
+        ax_.grid()
+        if len(functions__) % 2 == 1:
+            ax[(i + 1) % 2, (i + 1) // 2].axes.remove()
+
+    fig.legend(
+        bbox_to_anchor=(0.6, 0.98),
+        # loc='lower left',
+        # mode="expand",
+        ncol=2)
+
 
 def integrate(f: callable, bounds: iter, num_mc=int(1E6)):
     sampling = np.random.uniform(size=num_mc * len(bounds)).reshape(
@@ -65,27 +116,67 @@ def analyse_1d(test):
     sns.histplot(test.learner.x_input, bins=50)
 
 
-def plot_iter(test: "TestingClass"):
-    import matplotlib.pyplot as plt
+def plot_iterations_1d(test, iteration_max=None, color="b"):
     domain = np.linspace(test.bounds[0][0], test.bounds[0][1], 2000)
-    iter_ = int(test.learner.x_input.index.max())
+    if iteration_max is None:
+        iteration_max = int(test.indexes.max())
+    n_row = int(np.sqrt(iteration_max))
+    fig, axs = plt.subplots(iteration_max // n_row, n_row, sharey=True, sharex=True,
+                            figsize=(7, 7), dpi=200)
+
+    for iteration, ax in enumerate(axs.ravel()):
+
+        result_iter = test.result[iteration + 1]
+        learner = result_iter["learner"]
+
+        prediction = learner.predict(domain.reshape(-1, 1))
+        ax.plot(domain, prediction, color=color, label="iter={}".format(iteration), zorder=5)
+        ax.plot(domain, test.f(domain), color="grey", linestyle="--", zorder=0)
+        training_dataset = test.x_input.loc[test.indexes <= iteration + 1]
+        new_samples = test.x_input.loc[test.indexes == iteration + 2]
+
+        if hasattr(learner, 'active_criterion'):
+            uncertainty = learner.active_criterion(domain.reshape(-1, 1))
+            ax.fill_between(domain.ravel(), prediction - uncertainty,
+                            prediction + uncertainty, color=color, alpha=0.2)
+
+            if hasattr(learner.active_criterion, "models"):
+                for m in learner.active_criterion.models:
+                    y = m.predict(domain.reshape(-1, 1))
+                    ax.plot(domain, y, color="gray", lw=0.5)
+        ax.scatter(training_dataset, test.f(training_dataset), color="k",
+                   marker=".", zorder=10)
+
+        ax.scatter(new_samples, test.f(new_samples), color="r", marker=".",
+                   zorder=30)
+        ax.set_ylim(-0.9, 0.7)
+        ax.legend()
+        # ax.axis("off")
+
+
+def plot_active_function(test, color="b"):
+    domain = np.linspace(test.bounds[0][0], test.bounds[0][1], 2000)
+    iter_ = int(test.indexes.max())
     n_row = int(np.sqrt(iter_))
     fig, axs = plt.subplots(iter_ // n_row, n_row, sharey=True, sharex=True,
                             figsize=(8, 8), dpi=200)
 
-    test.learner.x_input.index = test.learner.x_input.index.astype(int)
     for iter, ax in enumerate(axs.ravel()):
-        res = test.learner.result[iter]
-        active_criterion = res["active_criterion"]
+
+        result_iter = test.result[iter]
+        learner = result_iter["learner"]
+        active_criterion = learner.active_criterion
+
         error = active_criterion(domain.reshape(-1, 1))
-        prediction = res["surface"](domain.reshape(-1, 1))
-        ax.plot(domain, prediction, color="b", label="iter={}".format(iter),
-                zorder=5)
+        prediction = learner.surface(domain.reshape(-1, 1))
+
+        ax.plot(domain, prediction, color=color, label="iter={}".format(iter), zorder=5)
         ax.plot(domain, test.f(domain), color="grey", linestyle="--", zorder=0)
-        ax.fill_between(domain.ravel(), prediction - error / 2,
-                        prediction + error / 2, color="b", alpha=0.2)
-        training_dataset = test.learner.x_input.loc[range(iter + 1)]
-        new_samples = test.learner.x_input.loc[iter + 1]
+
+        ax.fill_between(domain.ravel(), prediction - error,
+                        prediction + error, color=color, alpha=0.2)
+        training_dataset = test.x_input.loc[range(iter + 1)]
+        new_samples = test.x_input.loc[iter + 1]
 
         if hasattr(active_criterion, "models"):
             for m in active_criterion.models:
@@ -105,6 +196,9 @@ def write_benchmark(
         data: pd.DataFrame,
         path="examples/data/benchmark.csv", update=True):
     import os
+    path_dir = "/".join(path.split("/")[:-1])
+    if not os.path.exists(path_dir):
+        os.makedirs(path_dir)
 
     if update:
         if not os.path.exists(path):

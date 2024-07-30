@@ -23,8 +23,7 @@ from active_learning.components.utils import get_variance_function
 from active_learning.components.query_strategies import indices_of_random_sampling_in_finite_set
 
 
-SEED = 0
-RNG = np.random.default_rng(seed=SEED)
+
 
 
 def precompute_dataset(nb_samples):
@@ -32,8 +31,8 @@ def precompute_dataset(nb_samples):
     bounds = np.array(functions.bounds[function])
 
     dataset = pd.DataFrame({
-        'x1': RNG.uniform(low=bounds[0, 0], high=bounds[0, 1], size=nb_samples),
-        'x2': RNG.uniform(low=bounds[1, 0], high=bounds[1, 1], size=nb_samples),
+        'x1': np.uniform(low=bounds[0, 0], high=bounds[0, 1], size=nb_samples),
+        'x2': np.uniform(low=bounds[1, 0], high=bounds[1, 1], size=nb_samples),
         })
     dataset["y"] = function(dataset)
     return dataset
@@ -41,12 +40,12 @@ def precompute_dataset(nb_samples):
 
 def active_learning_training_dataset(full_dataset, nb_samples, *, nb_initial_samples=20, nb_samples_per_iteration=5):
     """Extract `nb_samples` from the `full_dataset` using active learning"""
-    initial_indices = RNG.choice(full_dataset.index, size=nb_initial_samples)
+    initial_indices  = np.choice(full_dataset.index, size=nb_initial_samples)
     train_dataset = full_dataset.loc[initial_indices]
     remaining_candidates = full_dataset.drop(initial_indices)
 
     while len(train_dataset) < nb_samples:
-        model = BaggingRegressor(random_state=SEED)
+        model = BaggingRegressor()
         model.fit(train_dataset[["x1", "x2"]], train_dataset["y"])
 
         def error_estimation(x):
@@ -66,14 +65,14 @@ full_training_dataset, test_dataset = train_test_split(full_dataset, train_size=
 
 # WITH ACTIVE LEARNING
 train_dataset_0 = active_learning_training_dataset(full_training_dataset, 100)
-model_0 = BaggingRegressor(random_state=SEED)
+model_0 = BaggingRegressor(random_state=0)
 model_0.fit(train_dataset_0[["x1", "x2"]], train_dataset_0["y"])
 print("Model score with active learning:", model_0.score(test_dataset[["x1", "x2"]], test_dataset["y"]))
 
 # WITHOUT ACTIVE LEARNING
-random_indices = RNG.choice(full_training_dataset.index, size=100)
+random_indices = np.choice(full_training_dataset.index, size=100)
 train_dataset_1 = full_training_dataset.loc[random_indices]
-model_1 = BaggingRegressor(random_state=SEED)
+model_1 = BaggingRegressor(random_state=0)
 model_1.fit(train_dataset_1[["x1", "x2"]], train_dataset_1["y"])
 print("Model score without active learning:", model_1.score(test_dataset[["x1", "x2"]], test_dataset["y"]))
 
